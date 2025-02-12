@@ -18,7 +18,7 @@ This project is a RESTful API built with FastAPI for managing a book collection.
 ```
 fastapi-book-project/
 |___ .github/
-|   |___ workflow/
+|   |___ workflows/
 |        |__ deploy.yml  # CI CD configurations
 |        |__ test.yml
 ├── api/
