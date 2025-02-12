@@ -17,6 +17,10 @@ This project is a RESTful API built with FastAPI for managing a book collection.
 
 ```
 fastapi-book-project/
+|___ .github/
+|   |___ workflow/
+|        |__ deploy.yml  # CI CD configurations
+|        |__ test.yml
 ├── api/
 │   ├── db/
 │   │   ├── __init__.py
@@ -78,6 +82,109 @@ uvicorn main:app
 
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+# Deploying FastAPI on AWS with Nginx
+
+## Prerequisites
+- AWS Free Tier account
+- EC2 instance (t3.micro or other available option)
+- SSH access to your instance
+- FastAPI application ready to deploy
+- Nginx installed on the EC2 instance
+
+## Step 1: Set Up Your EC2 Instance
+1. Log in to AWS and navigate to EC2.
+2. Launch a new EC2 instance and select an appropriate AMI (Amazon Linux, Ubuntu, etc.).
+3. Choose an instance type (e.g., `t3.micro`).
+4. Configure the security group to allow inbound traffic:
+   - HTTP (port 80) from anywhere
+   - HTTPS (port 443) from anywhere
+   - SSH (port 22) restricted to your IP
+   - Custom TCP rule for FastAPI (e.g., port 8000) if necessary
+5. Generate a key pair (RSA, `.pem` format) and download it.
+6. Launch the instance and note its public IP address.
+
+## Step 2: Connect to the Instance
+1. Open a terminal and run:
+   ```sh
+   ssh -i your-key.pem ec2-user@your-public-ip
+   ```
+2. Update and install dependencies:
+   ```sh
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install python3-pip python3-venv nginx -y
+   ```
+
+## Step 3: Deploy FastAPI Application
+1. Clone your FastAPI project:
+   ```sh
+   git clone https://github.com/your-repo.git
+   cd your-repo
+   ```
+2. Create a virtual environment and install dependencies:
+   ```sh
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+3. Run the FastAPI application with Gunicorn:
+   ```sh
+   gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000 -D
+   ```
+
+## Step 4: Configure Nginx as a Reverse Proxy
+1. Create a new Nginx configuration file:
+   ```sh
+   sudo nano /etc/nginx/sites-available/fastapi
+   ```
+2. Add the following configuration:
+   ```nginx
+   server {
+       listen 80;
+       server_name your-public-ip;
+
+       location / {
+           proxy_pass http://127.0.0.1:8000;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   ```
+3. Enable the configuration:
+   ```sh
+   sudo ln -s /etc/nginx/sites-available/fastapi /etc/nginx/sites-enabled/
+   sudo systemctl restart nginx
+   ```
+
+## Step 5: Set Up CI/CD (GitHub Actions)
+1. Create a `.github/workflows/deploy.yml` file in your repository:
+   ```yaml
+   name: Deploy FastAPI to AWS
+   on:
+     push:
+       branches:
+         - main
+   jobs:
+     deploy:
+       runs-on: ubuntu-latest
+       steps:
+         - name: Checkout Repository
+           uses: actions/checkout@v2
+         - name: Deploy to EC2
+           run: |
+             ssh -i your-key.pem ec2-user@your-public-ip "cd /path-to-app && git pull && source venv/bin/activate && pip install -r requirements.txt && sudo systemctl restart gunicorn"
+   ```
+
+## Step 6: Verify Deployment
+1. Access your FastAPI app via your public IP: `http://your-public-ip`
+2. Ensure the API responds correctly.
+
+## Conclusion
+You have successfully deployed a FastAPI application on AWS with Nginx and set up CI/CD using GitHub Actions!
+
+
 
 ## API Endpoints
 
