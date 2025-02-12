@@ -42,17 +42,4 @@ jobs:
             echo "Deployment successful!"
           EOF
 
-      - name: Fetch Logs (Post Deployment)
-        env:
-          PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
-          HOST: ${{ secrets.AWS_HOST }}
-          USER: ubuntu
-        run: |
-          ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST "journalctl -u fastapi --no-pager | tail -n 20"
 
-      - name: Cleanup Private Key
-        env:
-          PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
-          HOST: ${{ secrets.AWS_HOST }}
-          USER: ubuntu
-        run: rm -f private_key.pem
