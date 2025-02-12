@@ -13,6 +13,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Debug SSH Connection
+        env:
+          PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
+          HOST: ${{ secrets.AWS_HOST }}
+          USER: ubuntu
+        run: |
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          ssh -vvv -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST "echo 'SSH Connection Successful'"
+
       - name: Deploy to AWS EC2
         env:
           PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
@@ -22,9 +32,19 @@ jobs:
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
           ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST << 'EOF'
-            cd /home/ubuntu/fastapi-book-project
-            git pull origin main
-            source env/bin/activate
-            pip install -r requirements.txt
-            systemctl restart fastapi
+            set -e  # Exit on error
+            echo "Starting deployment on EC2..."
+            cd /home/ubuntu/fastapi-book-project || exit 1
+            git pull origin main || exit 1
+            source env/bin/activate || exit 1
+            pip install -r requirements.txt || exit 1
+            sudo systemctl restart fastapi || exit 1
+            echo "Deployment successful!"
           EOF
+
+      - name: Fetch Logs (Post Deployment)
+        run: |
+          ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST "journalctl -u fastapi --no-pager | tail -n 20"
+
+      - name: Cleanup Private Key
+        run: rm -f private_key.pem
