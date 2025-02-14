@@ -34,28 +34,37 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$HOST << 'EOF'
             set -e  # Exit on error
             echo "Starting deployment on EC2..."
-            cd /home/ubuntu/fastapi-book-project || exit 1
-
-            # stop the fast api service and kill any current gunicorn
-            sudo systemctl stop fastapi || true
-            sudo pkill -f gunicorn || true
-
-            # reload system and restart nginx
-            sudo systemctl daemon-reload || true
-            sudo systemctl restart nginx || true
-
-            # pull the latest code and install dependencies
-
-
             
+            cd /home/ubuntu/fastapi-book-project || exit 1
+      
+            # Stop FastAPI service and kill any existing Gunicorn processes
+            echo "Stopping FastAPI service..."
+            sudo systemctl stop fastapi || true
+            sleep 2  # Wait for shutdown
+            sudo pkill -9 -f gunicorn || true  # Force kill Gunicorn processes
+      
+            # Ensure systemd is reloaded
+            sudo systemctl daemon-reload || true
+      
+            # Pull latest code and install dependencies
+            echo "Pulling latest code..."
             git pull origin main || exit 1
             source env/bin/activate || exit 1
             pip install -r requirements.txt || exit 1
-
-            # Restart fastapi service
+      
+            # Restart FastAPI service
+            echo "Starting FastAPI service..."
             sudo systemctl start fastapi || exit 1
+      
+            # Wait for FastAPI to boot up before restarting Nginx
+            sleep 5
+            sudo systemctl restart nginx || exit 1
+      
+            # Check Gunicorn logs for debugging
+            sudo journalctl -u fastapi --no-pager -n 50
             
             echo "Deployment successful!"
           EOF
-
-
+      
+      
+      
