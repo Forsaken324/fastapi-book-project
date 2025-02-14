@@ -35,13 +35,26 @@ jobs:
             set -e  # Exit on error
             echo "Starting deployment on EC2..."
             cd /home/ubuntu/fastapi-book-project || exit 1
+
+            # stop the fast api service and kill any current gunicorn
+            sudo systemctl stop fastapi || true
+            sudo pkill -f gunicorn || true
+
+            # reload system and restart nginx
+            sudo systemctl daemon-reload || true
+            sudo systemctl restart nginx || true
+
+            # pull the latest code and install dependencies
+
+
+            
             git pull origin main || exit 1
             source env/bin/activate || exit 1
             pip install -r requirements.txt || exit 1
 
-            sudo systemctl daemon-reload || exit 1
-            sudo systemctl restart fastapi || exit 1
-            sudo systemctl restart nginx || exit 1
+            # Restart fastapi service
+            sudo systemctl start fastapi || exit 1
+            
             echo "Deployment successful!"
           EOF
 
