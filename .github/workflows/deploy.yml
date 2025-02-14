@@ -39,6 +39,7 @@ jobs:
             source env/bin/activate || exit 1
             pip install -r requirements.txt || exit 1
             sudo systemctl restart fastapi || exit 1
+            sudo systemctl restart nginx || exit 1
             echo "Deployment successful!"
           EOF
 
